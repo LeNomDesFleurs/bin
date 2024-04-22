@@ -7,7 +7,7 @@ echo "====                                                                      
 echo "====     Usage:                                                                                           ===="
 echo "====     ./distribute.sh PluginName DeveloperId Identifier Version                                        ===="
 echo "====     Exemple:                                                                                         ===="
-echo "====     ./distribute.sh Synthy "Jon Doe (53B7GD2XBM)" com.Doe.name 1.0.1                                 ===="
+echo "====     ./distribute.sh Synthy \"Jon Doe (53B7GD2XBM)\" com.Doe.name 1.0.1                                 ===="
 echo "====                                                                                                      ===="
 echo "====     PluginName = Plugin name without any extension - will try to create pkgs for VST/VST3/AU         ===="
 echo "====     Developer ID = \"Your Name (NNNNNNNNNN)\"                                                        ===="
