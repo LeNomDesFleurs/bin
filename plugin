@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+
+PLUGIN_NAME=$2
+DEVELOPER_ID=$3
+IDENTIFIER=$4
+VERSION=$5
+
+SYSTEM_PATH=/Library/Audio/Plug-Ins/Components/
+AU_SYSTEM_PATH=/Library/Audio/Plug-Ins/Components/"$PLUGIN_NAME".component
+AU_USER_PATH=~/Library/Audio/Plug-Ins/Components/"$PLUGIN_NAME".component
+VST3_SYSTEM_PATH=/Library/Audio/Plug-Ins/VST3/"$PLUGIN_NAME".vst3
+VST3_USER_PATH=~/Library/Audio/Plug-Ins/VST3/"$PLUGIN_NAME".vst3
+
+# FORMATING VARIABLE
+bold=$(tput bold)
+# italic=$(tput italic)
+normal=$(tput sgr0)
+red='\033[0;31m'   #'0;31' is Red's ANSI color code
+green='\033[0;32m'   #'0;32' is Green's ANSI color code
+yellow='\033[1;32m'   #'1;32' is Yellow's ANSI color code
+blue='\033[0;34m'   #'0;34' is Blue's ANSI color code
+    RED='\033[0;31m'
+NOCOLOR='\033[0m'
+
+usage () {
+    echo ''
+    echo Usage: script "${bold}delete${normal} | ${bold}probe${normal} | ${bold}distribute${normal}" Plugin_name_without_extension
+    echo ''
+    echo ${bold}delete${normal} tries to delete au and vst3 version of the plugin in system and user library
+    echo ''
+    echo ${bold}probe${normal} check if plugin exists in au and vst3 version in system and user library
+    echo ''
+    echo ${bold}distribute${normal} codesign and package a plugin in user library, for more info use 
+    echo -e "   ${RED}@ plugin distribute --help${NOCOLOR}"
+}
+
+delete () {
+
+rm -rfv ${AU_USER_PATH}
+rm -rfv ${AU_SYSTEM_PATH}
+rm -rfv ${VST3_SYSTEM_PATH}
+rm -rfv ${VST3_USER_PATH}
+}
+
+probe () {
+echo ''
+
+if [ -d "$AU_USER_PATH" ]; then
+    echo "✅ AU found in user 👤 library"
+fi
+
+if [ -d "$AU_SYSTEM_PATH" ]; then
+    echo "✅ AU found in system 💻 library"
+fi
+
+
+if [ -d "$VST3_USER_PATH" ]; then   
+    echo "✅ VST3 found in user 👤 library"
+fi
+
+if [ -d "$VST3_SYSTEM_PATH" ]; then
+    echo "✅ VST3 found in system 💻 library"
+fi
+
+if [ ! -d "$AU_USER_PATH" ] && [ ! -d "$AU_SYSTEM_PATH" ] && [ ! -d "$VST3_SYSTEM_PATH" ] && [ ! -d "$VST3_USER_PATH" ]; then
+    echo "❌ plugin not found"
+fi
+
+}
+
+distribute-helper(){
+    echo ""
+echo "=============================================================================================="
+echo "         Code signing and notarisation script                                                "
+echo "=============================================================================================="
+echo "                                                                                           "
+echo "    Usage:                                                                                   "
+echo "    ./distribute.sh PluginName DeveloperId Identifier Version                                "
+echo "    Exemple:                                                                                 "
+echo "    ./distribute.sh Synthy \"Jon Doe (53B7GD2XBM)\" com.Doe.name 1.0.1                         "
+echo "                                                                                             "
+echo "    PluginName = Plugin name without any extension - will try to create pkgs for VST/VST3/AU "
+echo "    Developer ID = \"Your Name (NNNNNNNNNN)\"                                                  "
+echo "    Identifier  = com.MyCompany.name                                                         "
+echo "    Version  = version number, i.e, 1.0.1                                                    "
+echo "                                                                                             "
+echo "    The installer will be found in your actual directory                                     "
+echo "    you can pass --dont-clean to see the intermediate package                                 "
+echo "==============================================================================================="
+echo ""
+}
+
+distribute () {
+    shift
+
+if [[ $# -lt 4 ]]; then
+    echo "Error: Illegal number of parameters..."
+    echo ""
+    exit
+fi
+
+CLEAN=true
+
+while getopts "h:-help:-dont-clean:" option; do
+  case $option in
+    -dont-clean)
+      CLEAN=false
+      ;;
+    h)
+    distribute-helper
+    exit 0
+    ;;
+    -help)
+    distribute-helper
+    exit 0
+    ;;
+  esac
+done
+
+# sign the AU binary
+codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$AU_USER_PATH" "$AU_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME"  #--options=runtime
+# package the .content and sign it
+pkgbuild --install-location "$AU_SYSTEM_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"au --version "$VERSION" --component "$AU_USER_PATH" "$PLUGIN_NAME"_au.pkg 
+# sign the VST binary
+codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$VST3_USER_PATH" "$VST3_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME"  #--options=runtime
+# package the .vst3 and sign it
+pkgbuild --install-location "$VST3_SYSTEM_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"vst3 --version "$VERSION" --component "$VST3_USER_PATH" "$PLUGIN_NAME"_vst3.pkg 
+# prepare the installer
+productbuild --synthesize --package "$PLUGIN_NAME"_au.pkg --package "$PLUGIN_NAME"_vst3.pkg distribution.xml
+# build the installer
+productbuild --distribution distribution.xml --resources Resources/ "$PLUGIN_NAME".pkg
+# Sign the installer
+productsign --sign "Developer ID Installer: $DEVELOPER_ID" "$PLUGIN_NAME".pkg "$PLUGIN_NAME"_installer.pkg --timestamp
+# notarize the installer for gatekeeper
+xcrun notarytool submit --keychain-profile "thomas" "$PLUGIN_NAME"_installer.pkg --wait
+# staple the ticket to the installer
+xcrun stapler staple "$PLUGIN_NAME"_installer.pkg
+
+
+if [ $CLEAN ]
+then
+# clean
+rm distribution.xml
+rm "$PLUGIN_NAME".pkg
+rm "$SYSTEM_PATH""$PLUGIN_NAME"_au.pkg
+rm "$SYSTEM_PATH""$PLUGIN_NAME"_vst3.pkg
+fi
+}
+
+# Associative array where we specify available entry points
+declare -A COMMANDS=(
+    [main]=usage
+    [delete]=delete
+    [probe]=probe
+    [distribute]=distribute
+)
+
+# echo if declare -A: invalid option - update bash
+
+# Magic line that makes it all working
+"${COMMANDS[${1:-main}]:-${COMMANDS[main]}}" "$@"
