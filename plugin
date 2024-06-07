@@ -31,20 +31,49 @@ usage () {
     echo ${bold}probe${normal} check if plugin exists in au and vst3 version in system and user library
     echo ''
     echo ${bold}distribute${normal} codesign and package a plugin in user library, for more info use 
-    echo -e "   ${RED}@ plugin distribute --help${NOCOLOR}"
+    echo -e "   ${RED}> plugin distribute --help${NOCOLOR}"
 }
 
-delete () {
+plugin_is_not_found(){
+if [ ! -d "$AU_USER_PATH" ] && [ ! -d "$AU_SYSTEM_PATH" ] && [ ! -d "$VST3_SYSTEM_PATH" ] && [ ! -d "$VST3_USER_PATH" ]; then
+    echo ""
+    echo "❌ plugin not found"
+    return 1
+else
+    return 0
+fi
+}
+
+delete() {
+
+if ! plugin_is_not_found; then
+    return 
+fi
 
 rm -rfv ${AU_USER_PATH}
-rm -rfv ${AU_SYSTEM_PATH}
-rm -rfv ${VST3_SYSTEM_PATH}
-rm -rfv ${VST3_USER_PATH}
+
+if rm -rfv ${AU_USER_PATH}; then
+    # echo "🗑️ AU deleted in user 👤 library"
+fi
+if rm -rfv ${AU_SYSTEM_PATH}; then
+    # echo "🗑️ AU deleted in system 💻 library"
+fi
+if rm -rfv ${VST3_USER_PATH}; then
+    # echo "🗑️ VST3 deleted in user 👤 library"
+fi
+if rm -rfv ${VST3_SYSTEM_PATH}; then
+    # echo "🗑️ VST3 deleted in system 💻 library"
+fi    
+
 }
 
-probe () {
-echo ''
+probe() {
 
+if ! plugin_is_not_found; then
+return
+fi
+        
+echo ''
 if [ -d "$AU_USER_PATH" ]; then
     echo "✅ AU found in user 👤 library"
 fi
@@ -52,7 +81,6 @@ fi
 if [ -d "$AU_SYSTEM_PATH" ]; then
     echo "✅ AU found in system 💻 library"
 fi
-
 
 if [ -d "$VST3_USER_PATH" ]; then   
     echo "✅ VST3 found in user 👤 library"
@@ -62,46 +90,38 @@ if [ -d "$VST3_SYSTEM_PATH" ]; then
     echo "✅ VST3 found in system 💻 library"
 fi
 
-if [ ! -d "$AU_USER_PATH" ] && [ ! -d "$AU_SYSTEM_PATH" ] && [ ! -d "$VST3_SYSTEM_PATH" ] && [ ! -d "$VST3_USER_PATH" ]; then
-    echo "❌ plugin not found"
-fi
-
 }
 
 distribute-helper(){
     echo ""
-echo "=============================================================================================="
-echo "         Code signing and notarisation script                                                "
-echo "=============================================================================================="
-echo "                                                                                           "
-echo "    Usage:                                                                                   "
-echo "    ./distribute.sh PluginName DeveloperId Identifier Version                                "
-echo "    Exemple:                                                                                 "
-echo "    ./distribute.sh Synthy \"Jon Doe (53B7GD2XBM)\" com.Doe.name 1.0.1                         "
-echo "                                                                                             "
-echo "    PluginName = Plugin name without any extension - will try to create pkgs for VST/VST3/AU "
-echo "    Developer ID = \"Your Name (NNNNNNNNNN)\"                                                  "
-echo "    Identifier  = com.MyCompany.name                                                         "
-echo "    Version  = version number, i.e, 1.0.1                                                    "
-echo "                                                                                             "
-echo "    The installer will be found in your actual directory                                     "
-echo "    you can pass --dont-clean to see the intermediate package                                 "
-echo "==============================================================================================="
+echo "==========================================================================="
+echo "         Code signing and notarisation script                              "
+echo "==========================================================================="
+echo "    The script will package AU and VST in your 👤 user library    "
+echo "    Use ${RED}plugin probe pluginname${NOCOLOR} to verify they exist      "
+echo "                                                                     "
+echo "    Usage:                                                             "
+echo "    plugin distribute PluginName DeveloperId Identifier Version      "
+echo "    Exemple:                                                            "
+echo "    plugin distribute Synthy \"Jon Doe (53B7GD2XBM)\" com.Doe.name 1.0.1"
+echo "                                                                       "
+echo "    PluginName = without any extension - will try to pkgs VST/VST3/AU "
+echo "    Developer ID = \"Your Name (NNNNNNNNNN)\"                           "
+echo "    Identifier  = com.MyCompany.pluginname                                "
+echo "    Version  = version number, e.g 1.0.1                         "
+echo "                                                                        "
+echo "    The installer will be found in your current directory                 "
+echo "    you can pass --dont-clean to see the intermediate package            "
+echo "==========================================================================="
 echo ""
 }
 
 distribute () {
+local CLEAN=true
+    
     shift
 
-if [[ $# -lt 4 ]]; then
-    echo "Error: Illegal number of parameters..."
-    echo ""
-    exit
-fi
-
-CLEAN=true
-
-while getopts "h:-help:-dont-clean:" option; do
+while getopts "h:-help:-dont-clean:v" option; do
   case $option in
     -dont-clean)
       CLEAN=false
@@ -114,36 +134,94 @@ while getopts "h:-help:-dont-clean:" option; do
     distribute-helper
     exit 0
     ;;
+    v)
+    VERBOSE = 1
+    ;;
   esac
 done
 
-# sign the AU binary
-codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$AU_USER_PATH" "$AU_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME"  #--options=runtime
-# package the .content and sign it
-pkgbuild --install-location "$AU_SYSTEM_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"au --version "$VERSION" --component "$AU_USER_PATH" "$PLUGIN_NAME"_au.pkg 
-# sign the VST binary
-codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$VST3_USER_PATH" "$VST3_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME"  #--options=runtime
-# package the .vst3 and sign it
-pkgbuild --install-location "$VST3_SYSTEM_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"vst3 --version "$VERSION" --component "$VST3_USER_PATH" "$PLUGIN_NAME"_vst3.pkg 
-# prepare the installer
-productbuild --synthesize --package "$PLUGIN_NAME"_au.pkg --package "$PLUGIN_NAME"_vst3.pkg distribution.xml
-# build the installer
-productbuild --distribution distribution.xml --resources Resources/ "$PLUGIN_NAME".pkg
-# Sign the installer
-productsign --sign "Developer ID Installer: $DEVELOPER_ID" "$PLUGIN_NAME".pkg "$PLUGIN_NAME"_installer.pkg --timestamp
-# notarize the installer for gatekeeper
-xcrun notarytool submit --keychain-profile "thomas" "$PLUGIN_NAME"_installer.pkg --wait
-# staple the ticket to the installer
-xcrun stapler staple "$PLUGIN_NAME"_installer.pkg
+if [[ $# -lt 4 ]]; then
+    echo "Error: Illegal number of parameters..."
+    echo ""
+    exit
+fi
 
+if ! plugin_is_not_found; then
+    return 
+fi
+
+# echo "$VERBOSE";
+
+# sign the AU binary
+if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$AU_USER_PATH" "$AU_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME"; then #--options=runtime
+    echo "✅ 🔏 AU codesigned"
+else
+    echo "❌ 🔏 Failed AU codesigning"
+    return
+fi
+# package the .content and sign it
+if pkgbuild --install-location "$AU_SYSTEM_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"au --component "$AU_USER_PATH" "$PLUGIN_NAME"_au.pkg; then
+    echo "✅ 📦 AU packaged"
+else
+    echo "❌ 📦 Failed AU packaging"
+    return
+fi 
+# sign the VST binary
+if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$VST3_USER_PATH" "$VST3_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME"; then  #--options=runtime
+    echo "✅ 🔏 VST3 codesigned"
+else
+    echo "❌ 🔏 Failed VST3 codesigning"
+    return
+fi
+# package the .vst3 and sign it
+if pkgbuild --install-location "$VST3_SYSTEM_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"vst3 --version "$VERSION" --component "$VST3_USER_PATH" "$PLUGIN_NAME"_vst3.pkg; then
+    echo "✅ 📦 VST3 packaged"
+else
+    echo "❌ 📦 Failed VST3 packaging"
+    return
+fi 
+# prepare the installer
+if productbuild --synthesize --package "$PLUGIN_NAME"_au.pkg --package "$PLUGIN_NAME"_vst3.pkg distribution.xml; then
+    echo "✅ ⚙️ Installer prepared"
+else 
+    echo "❌ ⚙️ Failed installer preparation"
+    return
+fi
+# build the installer
+if productbuild --distribution distribution.xml --resources Resources/ "$PLUGIN_NAME".pkg; then
+    echo "✅ ⬇️ Installer made"
+else
+    echo "❌ ⬇️ Failed installer construction"
+    return
+fi
+# Sign the installer
+if productsign --sign "Developer ID Installer: $DEVELOPER_ID" "$PLUGIN_NAME".pkg "$PLUGIN_NAME"_installer.pkg --timestamp; then
+    echo "✅ 🔏 Installer signed"
+else 
+    echo "❌ 🔏 Failed installer signature"
+    return
+fi
+# notarize the installer for gatekeeper
+if xcrun notarytool submit --keychain-profile "thomas" "$PLUGIN_NAME"_installer.pkg --wait; then
+    echo "✅ 👮 Apple validate signature"
+else
+    echo "❌ 👮 Failed notarization"
+    return
+fi
+# staple the ticket to the installer
+if xcrun stapler staple "$PLUGIN_NAME"_installer.pkg; then
+    echo "✅ 📎 Stapling worked"
+else 
+    echo "❌ 📎 Failed Stapling"
+fi
 
 if [ $CLEAN ]
 then
 # clean
 rm distribution.xml
 rm "$PLUGIN_NAME".pkg
-rm "$SYSTEM_PATH""$PLUGIN_NAME"_au.pkg
-rm "$SYSTEM_PATH""$PLUGIN_NAME"_vst3.pkg
+rm "$PLUGIN_NAME"_au.pkg
+rm "$PLUGIN_NAME"_vst3.pkg
 fi
 }
 
