@@ -53,16 +53,16 @@ fi
 rm -rfv ${AU_USER_PATH}
 
 if rm -rfv ${AU_USER_PATH}; then
-    # echo "🗑️ AU deleted in user 👤 library"
+     echo "🗑️ AU deleted in user 👤 library"
 fi
 if rm -rfv ${AU_SYSTEM_PATH}; then
-    # echo "🗑️ AU deleted in system 💻 library"
+     echo "🗑️ AU deleted in system 💻 library"
 fi
 if rm -rfv ${VST3_USER_PATH}; then
-    # echo "🗑️ VST3 deleted in user 👤 library"
+     echo "🗑️ VST3 deleted in user 👤 library"
 fi
 if rm -rfv ${VST3_SYSTEM_PATH}; then
-    # echo "🗑️ VST3 deleted in system 💻 library"
+     echo "🗑️ VST3 deleted in system 💻 library"
 fi    
 
 }
