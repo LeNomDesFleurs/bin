@@ -6,8 +6,10 @@ IDENTIFIER=$4
 VERSION=$5
 
 SYSTEM_PATH=/Library/Audio/Plug-Ins/Components/
+AU_INSTALL_PATH=/Library/Audio/Plug-Ins/Components/
 AU_SYSTEM_PATH=/Library/Audio/Plug-Ins/Components/"$PLUGIN_NAME".component
 AU_USER_PATH=~/Library/Audio/Plug-Ins/Components/"$PLUGIN_NAME".component
+VST3_INSTALL_PATH=/Library/Audio/Plug-Ins/VST3/
 VST3_SYSTEM_PATH=/Library/Audio/Plug-Ins/VST3/"$PLUGIN_NAME".vst3
 VST3_USER_PATH=~/Library/Audio/Plug-Ins/VST3/"$PLUGIN_NAME".vst3
 
@@ -160,7 +162,7 @@ else
     return
 fi
 # package the .content and sign it
-if pkgbuild --install-location "$AU_SYSTEM_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"au --component "$AU_USER_PATH" "$PLUGIN_NAME"_au.pkg; then
+if pkgbuild --install-location "$AU_INSTALL_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"au --component "$AU_USER_PATH" "$PLUGIN_NAME"_au.pkg; then
     echo "✅ 📦 AU packaged"
 else
     echo "❌ 📦 Failed AU packaging"
@@ -174,7 +176,7 @@ else
     return
 fi
 # package the .vst3 and sign it
-if pkgbuild --install-location "$VST3_SYSTEM_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"vst3 --version "$VERSION" --component "$VST3_USER_PATH" "$PLUGIN_NAME"_vst3.pkg; then
+if pkgbuild --install-location "$VST3_INSTALL_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"vst3 --version "$VERSION" --component "$VST3_USER_PATH" "$PLUGIN_NAME"_vst3.pkg; then
     echo "✅ 📦 VST3 packaged"
 else
     echo "❌ 📦 Failed VST3 packaging"
@@ -222,6 +224,7 @@ rm distribution.xml
 rm "$PLUGIN_NAME".pkg
 rm "$PLUGIN_NAME"_au.pkg
 rm "$PLUGIN_NAME"_vst3.pkg
+# rm "/Library/Audio/Plug-Ins/Components/"
 fi
 }
 
