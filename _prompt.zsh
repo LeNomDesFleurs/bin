@@ -69,7 +69,10 @@ prompt_config() {
   # The slashes perform a substitution: source/find/replace
   # Each time a substitution happens, the previous one much be wrapped in ${}
   # This entire string also has to be wrapped in ${}
-  ZSH_PROMPT_PATH='${${${${(%):-%~}/${(%):-%1~}/ %B${(%):-%1~}%b}/ %B${(%):-%-1~}%b/%B${(%):-%-1~}%b}//\//%B%F{cyan\}/%f%b}'
+  # bold slash
+  ZSH_PROMPT_PATH='${${${${(%):-%~}/${(%):-%1~}/ %B${(%):-%1~}%b}/ %B${(%):-%-1~}%b/%B${(%):-%-1~}%b}//\//%B/%b}'
+  # colored slash
+  # ZSH_PROMPT_PATH='${${${${(%):-%~}/${(%):-%1~}/ %B${(%):-%1~}%b}/ %B${(%):-%-1~}%b/%B${(%):-%-1~}%b}//\//%B%F{cyan\}/%f%b}'
 
   __prompt_precmd() {
     # Pass a line before each prompt

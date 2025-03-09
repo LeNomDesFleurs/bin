@@ -12,6 +12,8 @@ AU_USER_PATH=~/Library/Audio/Plug-Ins/Components/"$PLUGIN_NAME".component
 VST3_INSTALL_PATH=/Library/Audio/Plug-Ins/VST3/
 VST3_SYSTEM_PATH=/Library/Audio/Plug-Ins/VST3/"$PLUGIN_NAME".vst3
 VST3_USER_PATH=~/Library/Audio/Plug-Ins/VST3/"$PLUGIN_NAME".vst3
+AAX_INSTALL_PATH="/Library/Application Support/Avid/Audio/Plug-Ins/"
+AAX_SYSTEM_PATH="/Library/Application Support/Avid/Audio/Plug-Ins/"$PLUGIN_NAME.aaxplugin
 
 # FORMATING VARIABLE
 bold=$(tput bold)
@@ -66,6 +68,9 @@ fi
 if rm -rfv ${VST3_SYSTEM_PATH}; then
      echo "🗑️ VST3 deleted in system 💻 library"
 fi    
+if rm -rfv ${AAX_SYSTEM_PATH}; then
+     echo "🗑️ VST3 deleted in system 💻 library"
+fi  
 
 }
 
@@ -91,6 +96,11 @@ fi
 if [ -d "$VST3_SYSTEM_PATH" ]; then
     echo "✅ VST3 found in system 💻 library"
 fi
+
+if [ -d "$AAX_SYSTEM_PATH" ]; then
+    echo "✅ AAX found in system 💻 library"
+fi
+
 
 }
 
@@ -182,8 +192,23 @@ else
     echo "❌ 📦 Failed VST3 packaging"
     return
 fi 
+
+# sign the AAX binary
+if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$AAX_SYSTEM_PATH" "$AAX_SYSTEM_PATH"/Contents/MacOS/"$PLUGIN_NAME"; then  #--options=runtime
+    echo "✅ 🔏 AAX codesigned"
+else
+    echo "❌ 🔏 Failed AAX codesigning"
+    return
+fi
+# package the .aax and sign it
+if pkgbuild --install-location "$AAX_INSTALL_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"aax --version "$VERSION" --component "$AAX_SYSTEM_PATH" "$PLUGIN_NAME"_aax.pkg; then
+    echo "✅ 📦 AAX packaged"
+else
+    echo "❌ 📦 Failed AAX packaging"
+    return
+fi 
 # prepare the installer
-if productbuild --synthesize --package "$PLUGIN_NAME"_au.pkg --package "$PLUGIN_NAME"_vst3.pkg distribution.xml; then
+if productbuild --synthesize --package "$PLUGIN_NAME"_au.pkg --package "$PLUGIN_NAME"_vst3.pkg --package "$PLUGIN_NAME"_aax.pkg distribution.xml; then
     echo "✅ ⚙️ Installer prepared"
 else 
     echo "❌ ⚙️ Failed installer preparation"
@@ -224,7 +249,64 @@ rm distribution.xml
 rm "$PLUGIN_NAME".pkg
 rm "$PLUGIN_NAME"_au.pkg
 rm "$PLUGIN_NAME"_vst3.pkg
+rm "$PLUGIN_NAME"_aax.pkg
 # rm "/Library/Audio/Plug-Ins/Components/"
+fi
+}
+
+
+code-sign () {
+    shift
+
+local AU_PATH=$AU_SYSTEM_PATH
+local VST3_PATH=$VST3_SYSTEM_PATH
+
+while getopts "h:-help:v:-system" option; do
+  case $option in
+    h)
+    distribute-helper
+    exit 0
+    ;;
+    -help)
+    distribute-helper
+    exit 0
+    ;;
+    v)
+    VERBOSE = 1
+    ;;
+    -system)
+    $AU_PATH=$AU_SYSTEM_PATH
+    $VST3_PATH=$VST3_SYSTEM_PATH
+    ;;
+  esac
+done
+
+# if [[ $# -lt 4 ]]; then
+#     echo "Error: Illegal number of parameters..."
+#     echo ""
+#     exit
+# fi
+
+if ! plugin_is_not_found; then
+    return 
+fi
+
+# echo "$VERBOSE";
+
+# sign the AU binary
+if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$AU_PATH" "$AU_PATH"/Contents/MacOS/"$PLUGIN_NAME"; then #--options=runtime
+    echo "✅ 🔏 AU codesigned"
+else
+    echo "❌ 🔏 Failed AU codesigning"
+    return
+fi
+
+# sign the VST binary
+if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$VST3_PATH" "$VST3_PATH"/Contents/MacOS/"$PLUGIN_NAME"; then  #--options=runtime
+    echo "✅ 🔏 VST3 codesigned"
+else
+    echo "❌ 🔏 Failed VST3 codesigning"
+    return
 fi
 }
 
@@ -234,6 +316,7 @@ declare -A COMMANDS=(
     [delete]=delete
     [probe]=probe
     [distribute]=distribute
+    [code-sign]=code-sign
 )
 
 # echo if declare -A: invalid option - update bash

@@ -1,0 +1,105 @@
+#!/bin/bash
+
+#!/bin/bash
+
+# FORMATING VARIABLE
+bold=$(tput bold)
+# italic=$(tput italic)
+normal=$(tput sgr0)
+
+
+show_help(){
+echo "--------------------------------------------"
+echo "Compress lossless file, decrompress lossy file"
+echo "You terminal must be in the folder you want to modify"
+echo ""
+echo "list of conversion:"
+echo "flac -> mp3"
+echo "wav  -> mp3"
+echo "mp3  -> wav"
+echo ""
+echo "${bold}-b | --backup |${normal} To keep a backup of you tracks"
+echo "--------------------------------------------"
+}
+
+search_extension(){
+    i=1
+    while [ -z $extension_found ]
+do
+    file_name=`ls | head -n $i | tail -n 1`
+    file_extension="${file_name##*.}"
+    if [ "$file_extension" = "wav" ] ||
+    [ "$file_extension" = "mp3" ] ||
+    [ "$file_extension" = "WAV" ] ||
+    [ "$file_extension" = "flac" ]; then
+        extension_found=1
+    fi
+    if [[ $i -gt 40 ]]; then
+        echo "No audio file found"
+        exit 1
+    fi 
+  ((i++))
+done 
+}
+
+
+# Check for -h or --help flag
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -b|--backup)
+        backup=1
+        ;;
+        *)
+            echo "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+
+
+compress(){
+
+for file in ./backup/*; do
+    # Skip if no MP3 files exist
+    [[ -f "$file" ]] || continue
+    pattern=./backup/
+    full_name=${file//$pattern/}
+    input_extension="${full_name##*.}"
+    file_name="${full_name%.*}"
+    if [[ $input_extension = "mp3" ]]; then
+    output_extension=wav
+    else
+     output_extension=mp3
+    fi
+
+echo "${bold}$input_extension${normal} -> ${bold}$output_extension${normal} | ${bold}$file_name${normal}"
+
+ffmpeg -n -i "$file" -c:a libmp3lame -q:a 1 -ar 44100 -hide_banner \
+    -loglevel error -map_metadata 0 -map_metadata 0:s:0 -id3v2_version 3 -vn \
+    "${file_name}"."${output_extension}"
+
+done
+}
+
+echo ""
+mkdir -p backup
+mv *.mp3 ./backup 2> /dev/null
+mv *.wav ./backup 2> /dev/null
+mv *.WAV ./backup 2> /dev/null
+mv *.flac ./backup 2> /dev/null
+
+compress
+
+if [[ -z "$backup" ]]; then
+    rm -rf backup
+fi
+
+echo ""
+echo "convertion complete ✅"

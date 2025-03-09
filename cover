@@ -1,0 +1,104 @@
+#!/bin/bash
+
+# FORMATING VARIABLE
+bold=$(tput bold)
+# italic=$(tput italic)
+normal=$(tput sgr0)
+
+show_help(){
+echo "--------------------------------------------"
+echo "Apply a cover image to all mp3 in the folder"
+echo "You terminal must be in the folder you want to modify"
+echo ""
+echo "Will find any cover named"
+echo "- \"cover.jpg\""
+echo "- \"folder.jpg\""
+echo "- \"album.jpg\""
+echo "- \"cover.png\""
+echo ""
+echo "${bold}-c | --cover  |${normal} If your cover is not in the default names"
+echo "${bold}-b | --backup |${normal} To keep a backup of you tracks"
+echo "--------------------------------------------"
+}
+
+search_cover(){
+# Set cover image name patterns (modify if needed)
+cover_names=("cover.jpg" "folder.jpg" "album.jpg" "cover.png")
+
+# Find the first available cover image in the folder
+cover_image=""
+for name in "${cover_names[@]}"; do
+    if [[ -f "$name" ]]; then
+        cover_image="$name"
+        break
+    fi
+done
+
+# Check if a cover image was found
+if [[ -z "$cover_image" ]]; then
+    echo "Error: No album cover found in the current directory."
+    echo "use -c | --cover to explicit cover name"
+    echo "use -h | --help for the list of auto discoverable name"
+    exit 1
+fi
+
+}
+
+# handle flags
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -c|--cover)
+        shift; cover_image="$1"  # Store the provided file path
+        ;;
+        -b|--backup)
+        backup=1;
+        ;;
+        *)
+            echo "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# --------------- Process ----------------- #
+
+# search for cover image if none is provided
+if [[ -z "$cover_image" ]]; then
+search_cover
+fi
+echo ""
+echo "Using cover image: ${bold}$cover_image${normal}"
+echo ""
+# Create a folder for backuped MP3s
+mkdir -p backup
+mv *.mp3 ./backup
+
+# Process each MP3 file in the directory
+for file in ./backup/*.mp3; do
+    # Skip if no MP3 files exist
+    [[ -f "$file" ]] || continue
+
+    pattern=./backup/
+    destination=${file//$pattern/}
+
+    echo "🖼️ ${bold}$destination${normal}"
+
+    # Embed the album cover into the MP3 file
+    ffmpeg -i "$file" -i "$cover_image" -map 0:a -map 1:v -c copy \
+        -hide_banner -loglevel error \
+        -id3v2_version 3 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" \
+        "$destination"
+done
+
+
+if [[ -z "$backup" ]]; then
+    rm -rf backup
+fi
+echo ""
+echo "✅ All MP3 files updated with album cover"

@@ -1,0 +1,26 @@
+#!bash
+
+# Check if the required tools are available
+command -v md5sum >/dev/null 2>&1 || { echo >&2 "md5sum is required but not installed. Aborting."; exit 1; }
+
+# Declare an associative array to store hashes
+declare -A file_hashes
+
+# Find all files recursively in the current directory
+find . -type f -print0 | while IFS= read -r -d '' file; do
+    # Compute the hash of the file
+    hash=$(md5sum "$file" | awk '{print $1}')
+    
+    # Check if the hash already exists in the array
+    if [[ -n "${file_hashes[$hash]}" ]]; then
+        echo "Duplicate found: $file (matches ${file_hashes[$hash]})"
+        
+        # Remove the duplicate file
+        rm -f "$file"
+    else
+        # Store the hash and file path
+        file_hashes["$hash"]="$file"
+    fi
+done
+
+echo "Duplicate removal complete."

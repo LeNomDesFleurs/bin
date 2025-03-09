@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Define variables
+PHONE_PORT="8022"
+PHONE_USER="u0_a233"
+MAC_FOLDER="$HOME/FILES/MUSIC"
+PHONE_FOLDER="/data/data/com.termux/files/home/storage/music/"
+PHONE_MAC="aa:5b:81:50:21:ff"  # Replace with your phone's MAC address
+
+# Find phone's IP using MAC address
+PHONE_IP=$(arp -a | grep -i "$PHONE_MAC" | awk '{print $2}' | tr -d '()')
+PHONE_IP=$(route -n get default | grep gateway | awk '{print $2}')
+
+
+
+if [ -z "$PHONE_IP" ]; then
+    echo "Could not detect the phone's IP. Make sure it's connected to Wi-Fi."
+    exit 1
+fi
+
+echo "Detected phone IP: $PHONE_IP"
+
+# Sync Mac → Android (including deletions)
+echo "Syncing Mac → Android (with deletions)..."
+rsync -avz --delete -e "ssh -p $PHONE_PORT" "$MAC_FOLDER" "$PHONE_USER@$PHONE_IP:$PHONE_FOLDER"
+
+# Sync Android → Mac (including deletions)
+# echo "Syncing Android → Mac (with deletions)..."
+#rsync -avz --delete -e "ssh -p $PHONE_PORT" "$PHONE_USER@$PHONE_IP:$PHONE_FOLDER" "$MAC_FOLDER"
+
+echo "Sync complete!"
