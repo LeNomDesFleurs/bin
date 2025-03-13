@@ -69,7 +69,7 @@ if rm -rfv ${VST3_SYSTEM_PATH}; then
      echo "🗑️ VST3 deleted in system 💻 library"
 fi    
 if rm -rfv ${AAX_SYSTEM_PATH}; then
-     echo "🗑️ VST3 deleted in system 💻 library"
+     echo "🗑️ AAX deleted in system 💻 library"
 fi  
 
 }
@@ -165,28 +165,28 @@ fi
 # echo "$VERBOSE";
 
 # sign the AU binary
-if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$AU_USER_PATH" "$AU_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME"; then #--options=runtime
+if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$AU_USER_PATH" "$AU_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME" >&2; then #--options=runtime
     echo "✅ 🔏 AU codesigned"
 else
     echo "❌ 🔏 Failed AU codesigning"
     return
 fi
 # package the .content and sign it
-if pkgbuild --install-location "$AU_INSTALL_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"au --component "$AU_USER_PATH" "$PLUGIN_NAME"_au.pkg; then
+if pkgbuild --quiet --install-location "$AU_INSTALL_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"au --component "$AU_USER_PATH" "$PLUGIN_NAME"_au.pkg; then
     echo "✅ 📦 AU packaged"
 else
     echo "❌ 📦 Failed AU packaging"
     return
 fi 
 # sign the VST binary
-if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$VST3_USER_PATH" "$VST3_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME"; then  #--options=runtime
+if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$VST3_USER_PATH" "$VST3_USER_PATH"/Contents/MacOS/"$PLUGIN_NAME" >&2; then  #--options=runtime
     echo "✅ 🔏 VST3 codesigned"
 else
     echo "❌ 🔏 Failed VST3 codesigning"
     return
 fi
 # package the .vst3 and sign it
-if pkgbuild --install-location "$VST3_INSTALL_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"vst3 --version "$VERSION" --component "$VST3_USER_PATH" "$PLUGIN_NAME"_vst3.pkg; then
+if pkgbuild --quiet --install-location "$VST3_INSTALL_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"vst3 --version "$VERSION" --component "$VST3_USER_PATH" "$PLUGIN_NAME"_vst3.pkg; then
     echo "✅ 📦 VST3 packaged"
 else
     echo "❌ 📦 Failed VST3 packaging"
@@ -194,49 +194,50 @@ else
 fi 
 
 # sign the AAX binary
-if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$AAX_SYSTEM_PATH" "$AAX_SYSTEM_PATH"/Contents/MacOS/"$PLUGIN_NAME"; then  #--options=runtime
+if codesign -s "Developer ID Application: $DEVELOPER_ID" --timestamp --force -o runtime -i "$AAX_SYSTEM_PATH" "$AAX_SYSTEM_PATH"/Contents/MacOS/"$PLUGIN_NAME" >&2; then  #--options=runtime
     echo "✅ 🔏 AAX codesigned"
 else
     echo "❌ 🔏 Failed AAX codesigning"
     return
 fi
 # package the .aax and sign it
-if pkgbuild --install-location "$AAX_INSTALL_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"aax --version "$VERSION" --component "$AAX_SYSTEM_PATH" "$PLUGIN_NAME"_aax.pkg; then
+if pkgbuild --quiet --install-location "$AAX_INSTALL_PATH" --sign "Developer ID Installer: $DEVELOPER_ID" --timestamp --identifier "$IDENTIFIER"aax --version "$VERSION" --component "$AAX_SYSTEM_PATH" "$PLUGIN_NAME"_aax.pkg; then
     echo "✅ 📦 AAX packaged"
 else
     echo "❌ 📦 Failed AAX packaging"
     return
 fi 
 # prepare the installer
-if productbuild --synthesize --package "$PLUGIN_NAME"_au.pkg --package "$PLUGIN_NAME"_vst3.pkg --package "$PLUGIN_NAME"_aax.pkg distribution.xml; then
+if productbuild --quiet --synthesize --package "$PLUGIN_NAME"_au.pkg --package "$PLUGIN_NAME"_vst3.pkg --package "$PLUGIN_NAME"_aax.pkg distribution.xml; then
     echo "✅ ⚙️ Installer prepared"
 else 
     echo "❌ ⚙️ Failed installer preparation"
     return
 fi
 # build the installer
-if productbuild --distribution distribution.xml --resources Resources/ "$PLUGIN_NAME".pkg; then
+if productbuild --quiet --distribution distribution.xml --resources Resources/ "$PLUGIN_NAME".pkg; then
     echo "✅ ⬇️ Installer made"
 else
     echo "❌ ⬇️ Failed installer construction"
     return
 fi
 # Sign the installer
-if productsign --sign "Developer ID Installer: $DEVELOPER_ID" "$PLUGIN_NAME".pkg "$PLUGIN_NAME"_installer.pkg --timestamp; then
+if productsign --sign "Developer ID Installer: $DEVELOPER_ID" "$PLUGIN_NAME".pkg "$PLUGIN_NAME"_installer.pkg --timestamp >&2; then
     echo "✅ 🔏 Installer signed"
 else 
     echo "❌ 🔏 Failed installer signature"
     return
 fi
+echo "⏰ Wait for notarization"
 # notarize the installer for gatekeeper
-if xcrun notarytool submit --keychain-profile "thomas" "$PLUGIN_NAME"_installer.pkg --wait; then
+if xcrun notarytool submit --keychain-profile "thomas" "$PLUGIN_NAME"_installer.pkg --wait >&2; then
     echo "✅ 👮 Apple validate signature"
 else
     echo "❌ 👮 Failed notarization"
     return
 fi
 # staple the ticket to the installer
-if xcrun stapler staple "$PLUGIN_NAME"_installer.pkg; then
+if xcrun stapler staple "$PLUGIN_NAME"_installer.pkg >&2; then
     echo "✅ 📎 Stapling worked"
 else 
     echo "❌ 📎 Failed Stapling"
