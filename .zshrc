@@ -1,3 +1,6 @@
+# to simlink this file 
+# ln -sf "$HOME/bin/.zshrc" "$HOME/.zshrc"
+
 # path to personal bin
 export PATH=$HOME/bin:/usr/local/bin:$PATH
 export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
