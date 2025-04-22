@@ -35,11 +35,10 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         -o|--output)
-        shift; OUTPUT="$1"  # Store the provided file path
+        shift; OUTPUT="$1" 
         ;;
         -c|--colors)
         shift; COLORS=$1
-        backup=1;
         ;;
         *)
             echo "Unknown option: $1"
@@ -50,7 +49,7 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-
+# speed up process by reducing image size
 magick $INPUT -sample 10% temp.png
 
 TEST_VARIABLE=`magick temp.png -format %c -colorspace LAB -colors $COLORS histogram:info:- | sort -n -r | tr ' ' '\n' | sed -n '/^srgb/p' | tr ' ' '\r'`
@@ -63,25 +62,5 @@ for ((i=1; i<=COLORS; i++)); do
     images+=("xc:\"$color\"")
 done
 
+# create picture where each pixel is one of the colors
 eval magick -size 60x60 "${images[@]}" +append $OUTPUT
-
-
-# magick \
-# -size 60x60 \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 1p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 2p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 3p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 4p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 5p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 6p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 7p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 8p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 9p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 10p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 11p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 13p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 14p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 15p`" \
-# xc:"`echo "$TEST_VARIABLE" | sed -n 16p`" \
-# +append \
-# palette.png
