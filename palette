@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# FORMATING VARIABLE
+bold=$(tput bold)
+# italic=$(tput italic)
+normal=$(tput sgr0)
+
+# set defaults
+INPUT=0
+COLORS=16
+OUTPUT="palette.png"
+
+show_help(){
+echo "--------------------------------------------"
+echo "Get dominant colors"
+echo ""
+echo "${bold}-i | --input  |${normal} Input name"
+echo "${bold}-o | --output |${normal} Output name (default palette.png)"
+echo "${bold}-c | --colors |${normal} Number of colors (default 16)"
+echo ""
+echo "Example : palette img.png -c 16 -o palette.png"
+echo ""
+echo "--------------------------------------------"
+}
+
+
+# handle flags
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -i|--input)
+            shift; INPUT="$1"
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -o|--output)
+        shift; OUTPUT="$1"  # Store the provided file path
+        ;;
+        -c|--colors)
+        shift; COLORS=$1
+        backup=1;
+        ;;
+        *)
+            echo "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+
+magick $INPUT -sample 10% temp.png
+
+TEST_VARIABLE=`magick temp.png -format %c -colorspace LAB -colors $COLORS histogram:info:- | sort -n -r | tr ' ' '\n' | sed -n '/^srgb/p' | tr ' ' '\r'`
+
+rm temp.png
+
+images=()
+for ((i=1; i<=COLORS; i++)); do
+    color=$(echo "$TEST_VARIABLE" | sed -n "${i-1}p")
+    images+=("xc:\"$color\"")
+done
+
+eval magick -size 60x60 "${images[@]}" +append $OUTPUT
+
+
+# magick \
+# -size 60x60 \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 1p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 2p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 3p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 4p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 5p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 6p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 7p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 8p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 9p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 10p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 11p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 13p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 14p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 15p`" \
+# xc:"`echo "$TEST_VARIABLE" | sed -n 16p`" \
+# +append \
+# palette.png
