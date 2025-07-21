@@ -2,7 +2,7 @@
 
 # FORMATING VARIABLE
 bold=$(tput bold)
-# italic=$(tput italic)
+italic=$(tput italic)
 normal=$(tput sgr0)
 
 # set defaults
@@ -12,13 +12,15 @@ OUTPUT="palette.png"
 
 show_help(){
 echo "--------------------------------------------"
-echo "Get dominant colors"
+echo "Get dominant colors of a picture"
+echo "Requires ${bold}ImageMagick${normal} to be installed"
 echo ""
-echo "${bold}-i | --input  |${normal} Input name"
-echo "${bold}-o | --output |${normal} Output name (default palette.png)"
-echo "${bold}-c | --colors |${normal} Number of colors (default 16)"
+echo "  ${bold}-i | --input  |${normal} Input name"
+echo "  ${bold}-o | --output |${normal} Output name      ${bold}|${normal} palette.png"
+echo "  ${bold}-c | --colors |${normal} Number of colors ${bold}|${normal} 16"
+echo "  ${bold}-h | --help   |${normal} Help Menu"
 echo ""
-echo "Example : palette img.png -c 16 -o palette.png"
+echo "Example : palette -i img.png -c 11 -o new-palette.png"
 echo ""
 echo "--------------------------------------------"
 }
