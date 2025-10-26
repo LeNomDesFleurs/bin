@@ -3,6 +3,7 @@
 
 # ----- PATHS -----
 export PATH=$HOME/bin:/usr/local/bin:$PATH
+export PATH=$HOME/scripts:/usr/local/scripts:$PATH
 export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
 export PATH="$PATH:$HOME/.composer/vendor/bin"
 export ZDOTDIR=~/
