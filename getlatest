@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Base path - update this to your actual base path
+BASE_PATH="/Volumes/projets/SW/FX-Collection/Ambient/FX_AMBIENT/versions"
+
+# Find the latest version folder (semantic versioning sort)
+LATEST_VERSION=$(ls -d "$BASE_PATH"/*/ 2>/dev/null | \
+    sed 's:/*$::' | \
+    xargs -n1 basename | \
+    sort -t. -k1,1n -k2,2n -k3,3n | \
+    tail -1)
+
+if [ -z "$LATEST_VERSION" ]; then
+    echo "❌ No version folders found in $BASE_PATH"
+    exit 1
+fi
+
+echo "📦 Latest version: $LATEST_VERSION"
+
+# Find the latest build folder within that version
+VERSION_PATH="$BASE_PATH/$LATEST_VERSION"
+LATEST_BUILD=$(ls -d "$VERSION_PATH"/*/ 2>/dev/null | \
+    sort | \
+    tail -1)
+
+if [ -z "$LATEST_BUILD" ]; then
+    echo "❌ No build folders found in $VERSION_PATH"
+    exit 1
+fi
+
+echo "🔨 Latest build: $(basename "$LATEST_BUILD")"
+
+# Find the .pkg file in the mac subfolder (excluding component folder)
+PKG_FILE=$(find "$LATEST_BUILD/mac" -name "*.pkg" -type f -not -path "*/component/*" 2>/dev/null | head -1)
+
+if [ -z "$PKG_FILE" ]; then
+    echo "❌ No .pkg file found in $LATEST_BUILD/mac"
+    exit 1
+fi
+
+echo "📄 Package: $(basename "$PKG_FILE")"
+
+# Copy to Desktop
+DESKTOP="$HOME/Desktop"
+cp "$PKG_FILE" "$DESKTOP/"
+
+if [ $? -eq 0 ]; then
+    echo "✅ Copied to Desktop!"
+    
+    # Open the package
+    open "$DESKTOP/$(basename "$PKG_FILE")"
+    echo "🚀 Opening package..."
+else
+    echo "❌ Failed to copy package"
+    exit 1
+fi

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Check if an argument was provided
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <input_file>"
+    exit 1
+fi
+
+# Get input file and create output filename
+input="$1"
+output="${input%.*}.gif"
+
+# Convert to GIF
+ffmpeg -i "$input" \
+    -vf "fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" \
+    -loop 0 "$output"
+
+echo "Created: $output"
